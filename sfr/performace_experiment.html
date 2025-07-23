@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Clipboard Performance Test</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+  <h1>Clipboard Performance Test</h1>
+
+  <div class="controls">
+    <div class="how-to-use">
+      <h3>How to use</h3>
+      <ol>
+        <li>Write only text to clipboard by clicking on "Write 1MB Text Only" button.</li>
+        <li>Read text from clipboard by clicking on "Read Text from Clipboard" button.</li>
+        <li>Write text and HTML to clipboard by clicking on "Write 1MB Text + 3MB HTML" button.</li>
+        <li>Read text from clipboard by clicking on "Read Text from Clipboard" button.</li>
+        <li>Read selected format from clipboard by clicking on "Selected Format Read Text from Clipboard" button.</li>
+      </ol>
+
+      <div class="note">
+        <strong>Note:</strong> Do not consider the results when clipboard read permission is asked for the first time.
+      </div>
+    </div>
+
+    
+
+    <h3>Write Data to Clipboard</h3>
+    <button id="write-text-btn">Write 1MB Text Only</button>
+    <button id="write-text-html-btn">Write 1MB Text + 3MB HTML</button>
+
+    <h3>Read Data from Clipboard</h3>
+    <button id="read-btn">Read Text from Clipboard</button>
+
+    <button id="selected-format-read-btn">Selected Format Read Text from Clipboard</button>
+
+    <button id="clear-results-btn">Clear Results</button>
+  </div>
+
+  <table class="results-table" id="results-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Time</th>
+        <th>Data Type</th>
+        <th>Read Time (ms)</th>
+      </tr>
+    </thead>
+    <tbody id="results-body">
+      <!-- Results will be added here -->
+    </tbody>
+  </table>
+
+  <div class="log" id="log"></div>
+
+  <script>
+    let testResults = [];
+
+    function log(message, type = 'info') {
+      const logElement = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.innerHTML = `[${timestamp}] ${message}`;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    // Generates data of specified size in MB
+    function generateDataOfSize(sizeInMB) {
+      const bytesPerMB = 1024 * 1024;
+      const targetBytes = sizeInMB * bytesPerMB;
+
+      log(`Generating ${sizeInMB} MB of data...`);
+
+      // Each character in JavaScript is 2 bytes (UTF-16)
+      const totalChars = targetBytes / 2;
+      const result = 'A'.repeat(totalChars);
+
+      log(`Data generated: ${(result.length * 2 / bytesPerMB).toFixed(2)} MB`, "success");
+      return result;
+    }
+
+    // Writes text-only data to clipboard
+    async function writeTextOnly() {
+      try {
+        log("Writing 1MB text data to clipboard...");
+        const textData = generateDataOfSize(1);
+
+        const clipboardItems = {
+          'text/plain': new Blob([textData], { type: 'text/plain' })
+        };
+
+        await navigator.clipboard.write([new ClipboardItem(clipboardItems)]);
+        log("Text data written successfully", "success");
+
+      } catch (error) {
+        log(`Error writing text data: ${error.message}`, "error");
+      }
+    }
+
+    // Writes text and HTML data to clipboard
+    async function writeTextAndHTMLData() {
+      try {
+        log("Writing 1MB text + 3MB HTML data to clipboard...");
+        const textData = generateDataOfSize(1);
+        const htmlData = `<html><body><pre>${generateDataOfSize(3)}</pre></body></html>`;
+
+        const clipboardItems = {
+          'text/plain': new Blob([textData], { type: 'text/plain' }),
+          'text/html': new Blob([htmlData], { type: 'text/html' })
+        };
+
+        await navigator.clipboard.write([new ClipboardItem(clipboardItems)]);
+        log("Mixed data written successfully", "success");
+      } catch (error) {
+        log(`Error writing mixed data: ${error.message}`, "error");
+      }
+    }
+
+    // Reads text from clipboard and measure time
+    async function readTextFromClipboard() {
+      const startTime = performance.now();
+      try {
+        log("Reading data from clipboard...");
+        const clipboardData = await navigator.clipboard.read();
+
+        const blob = await clipboardData[0].getType('text/plain');
+        const endTime = performance.now();
+
+        const readTime = endTime - startTime;
+
+        log(`Read completed in ${readTime.toFixed(2)} ms`, "success");
+
+        // Add result to table
+        addResult('text/plain', readTime);
+
+      } catch (error) {
+        log(`Error reading from clipboard: ${error.message}`, "error");
+      }
+    }
+
+    // Reads selected format from clipboard
+    async function readSelectedFormatFromClipboard() {
+      const startTime = performance.now();
+      try {
+        log("Reading selected format from clipboard...");
+        const clipboardData = await navigator.clipboard.read({ types: ['text/plain'] });
+
+        // Assuming we want to read 'text/plain' if available
+        const blob = await clipboardData[0].getType('text/plain');
+        const endTime = performance.now();
+
+        const readTime = endTime - startTime;
+
+        log(`Selected read completed in ${readTime.toFixed(2)} ms`, "success");
+
+        // Add result to table
+        addResult('text/plain', readTime);
+
+      } catch (error) {
+        log(`Error reading selected format from clipboard: ${error.message}`, "error");
+      }
+    }
+
+    // Adds result to the table
+    function addResult(dataType, readTime) {
+      const tableBody = document.getElementById('results-body');
+      const row = document.createElement('tr');
+      const resultNumber = testResults.length + 1;
+      const timestamp = new Date().toLocaleTimeString();
+
+      row.innerHTML = `
+                <td>${resultNumber}</td>
+                <td>${timestamp}</td>
+                <td>${dataType}</td>
+                <td>${readTime.toFixed(2)}</td>
+            `;
+
+      tableBody.appendChild(row);
+
+      // Store result
+      testResults.push({
+        number: resultNumber,
+        timestamp: timestamp,
+        dataType: dataType,
+        readTime: readTime
+      });
+    }
+
+    function clearResults() {
+      document.getElementById('results-body').innerHTML = '';
+      testResults = [];
+      log("Results table cleared", "info");
+    }
+
+    document.getElementById('write-text-btn')
+      .addEventListener('click', writeTextOnly);
+    document.getElementById('write-text-html-btn')
+      .addEventListener('click', writeTextAndHTMLData);
+    document.getElementById('read-btn')
+      .addEventListener('click', readTextFromClipboard);
+    document.getElementById('selected-format-read-btn')
+      .addEventListener('click', readSelectedFormatFromClipboard);
+    document.getElementById('clear-results-btn')
+      .addEventListener('click', clearResults);
+
+    // Initialize
+    log("Click 'Write 3MB Text Only' or 'Write 3MB Text + 3MB HTML' to start testing");
+    log("Or click 'Read from Clipboard' to test reading existing clipboard data");
+  </script>
+</body>
+
+</html>
