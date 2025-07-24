@@ -114,9 +114,9 @@
         };
 
         await navigator.clipboard.write([new ClipboardItem(clipboardItems)]);
-        log("Mixed data written successfully", "success");
+        log("Text & HTML data written successfully", "success");
       } catch (error) {
-        log(`Error writing mixed data: ${error.message}`, "error");
+        log(`Error writing Text & HTML data: ${error.message}`, "error");
       }
     }
 
@@ -208,7 +208,7 @@
       .addEventListener('click', clearResults);
 
     // Initialize
-    log("Click 'Write 3MB Text Only' or 'Write 3MB Text + 3MB HTML' to start testing");
+    log("Click 'Write 1MB Text Only' or 'Write 1MB Text + 3MB HTML' to start testing");
     log("Or click 'Read from Clipboard' to test reading existing clipboard data");
   </script>
 </body>
