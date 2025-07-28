@@ -14,10 +14,10 @@
       <h3>How to use</h3>
       <ol>
         <li>Write only text to clipboard by clicking on "Write 1MB Text Only" button.</li>
-        <li>Read text from clipboard by clicking on "Read Text from Clipboard" button.</li>
+        <li>Read text from clipboard by clicking on "Read from Clipboard" button.</li>
         <li>Write text and HTML to clipboard by clicking on "Write 1MB Text + 3MB HTML" button.</li>
-        <li>Read text from clipboard by clicking on "Read Text from Clipboard" button.</li>
-        <li>Read selected format from clipboard by clicking on "Selected Format Read Text from Clipboard" button.</li>
+        <li>Read text from clipboard by clicking on "Read from Clipboard" button.</li>
+        <li>Read selected format from clipboard by clicking on "Selected Format Read from Clipboard" button.</li>
       </ol>
 
       <div class="note">
@@ -25,16 +25,27 @@
       </div>
     </div>
 
-    
+
 
     <h3>Write Data to Clipboard</h3>
     <button id="write-text-btn">Write 1MB Text Only</button>
     <button id="write-text-html-btn">Write 1MB Text + 3MB HTML</button>
 
     <h3>Read Data from Clipboard</h3>
-    <button id="read-btn">Read Text from Clipboard</button>
+    <button id="read-btn">Read from Clipboard</button>
 
-    <button id="selected-format-read-btn">Selected Format Read Text from Clipboard</button>
+    <h4>Selected Format Read</h4>
+    <div class="format-selection">
+      <label>Select formats to read:</label><br>
+      <input type="checkbox" id="text-plain-checkbox" value="text/plain">
+      <label for="text-plain-checkbox">text/plain</label><br>
+      <input type="checkbox" id="text-html-checkbox" value="text/html">
+      <label for="text-html-checkbox">text/html</label><br>
+      <input type="checkbox" id="image-png-checkbox" value="image/png">
+      <label for="image-png-checkbox">image/png</label><br>
+
+    </div>
+    <button id="selected-format-read-btn">Selected Format Read from Clipboard</button>
 
     <button id="clear-results-btn">Clear Results</button>
   </div>
@@ -44,7 +55,7 @@
       <tr>
         <th>#</th>
         <th>Time</th>
-        <th>Data Type</th>
+        <th>Clipboard Read Type</th>
         <th>Read Time (ms)</th>
       </tr>
     </thead>
@@ -127,15 +138,14 @@
         log("Reading data from clipboard...");
         const clipboardData = await navigator.clipboard.read();
 
-        const blob = await clipboardData[0].getType('text/plain');
         const endTime = performance.now();
-
         const readTime = endTime - startTime;
 
         log(`Read completed in ${readTime.toFixed(2)} ms`, "success");
+        log(`Available item types: [${clipboardData[0].types.join(', ')}]`, "info");
 
         // Add result to table
-        addResult('text/plain', readTime);
+        addResult(`read()`, readTime);
 
       } catch (error) {
         log(`Error reading from clipboard: ${error.message}`, "error");
@@ -144,21 +154,32 @@
 
     // Reads selected format from clipboard
     async function readSelectedFormatFromClipboard() {
+      const checkboxes = document.querySelectorAll('.format-selection input[type="checkbox"]:checked');
+      const selectedTypes = Array.from(checkboxes).map(cb => cb.value);
       const startTime = performance.now();
       try {
-        log("Reading selected format from clipboard...");
-        const clipboardData = await navigator.clipboard.read({ types: ['text/plain'] });
-
-        // Assuming we want to read 'text/plain' if available
-        const blob = await clipboardData[0].getType('text/plain');
+        if (selectedTypes.length === 0) {
+          log("No formats selected. Reading all formats...");
+        } else {
+          log(`Reading selected formats from clipboard: [${selectedTypes.join(', ')}] ...`);
+        }
+        const clipboardData = await navigator.clipboard.read({ types: selectedTypes });
         const endTime = performance.now();
 
         const readTime = endTime - startTime;
+        log(`Selected formats read completed in ${readTime.toFixed(2)} ms for [${selectedTypes.join(', ')}]`, "success");
+        const item = clipboardData[0];
+        log(`Available item types: [${item.types.join(', ')}]`, "info");
+        for (const type of selectedTypes) {
+          item.getType(type).then(blob => {
+            log(`getType(${type}) success`, "success");
+          }).catch(err => {
+            log(`getType(${type}) failed: ${err.message}`, "error");
+          });
+        }
 
-        log(`Selected read completed in ${readTime.toFixed(2)} ms`, "success");
 
-        // Add result to table
-        addResult('text/plain', readTime);
+        addResult(`read( { types: [ ${selectedTypes.join(', ')} ] } )`, readTime);
 
       } catch (error) {
         log(`Error reading selected format from clipboard: ${error.message}`, "error");
